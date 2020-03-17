@@ -1,7 +1,7 @@
 # Multi-Agent Generative Adversarial Imitation Learning
 
    This repo contains a general `MAGAIL` implementation, it's useful when learning a **Joint-policy** : 
-mix `agent policy` and `environment policy` together.  The `Agent` can interact with `Environment` by taking action according to the state given by the `Environment`, 
+mixing `agent policy` and `environment policy` together.  The `Agent` can interact with `Environment` by taking action according to the state given by the `Environment`, 
 and the `Environment` sends state according to agent's action.
 
 ## 1.Formulation of Joint-policy
@@ -9,7 +9,7 @@ and the `Environment` sends state according to agent's action.
    In [GAIL](https://arxiv.org/pdf/1606.03476.pdf), it's the most trivial case that only a **single** agent. Multi-Agent can be general more than one, here we only focus two agents.  
 
    As you can imagine a scenario in `Commodity Recommendation` :  The Platform will decide what kind of commodities to recommend according to user's action (buy ? browse ? search ? add to shopping cart ? ...... ),
-from another point of view, A user will take corresponding actions according to what they see(he like the goods, so he bought; he is interested in the commodities, so he browse them or add to the shopping cart). 
+from another point of view, A user will take corresponding actions according to what they see(he like the goods, so he bought, he is interested in the commodities, so he browse them or add to the shopping cart). 
 
 The structure should be like this:
 
