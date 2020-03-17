@@ -19,79 +19,80 @@ The structure should be like this:
 ## 2.Usage
 
 ### 1. To run the example, first you need to install necessary dependencies:
-    ```textmate
-    1. python >= 3.6
-    2. pytorch >= 1.3.1
-    3. pandas >= 1.0.1
-    4. PyYAML >= 5.3    
-    ```
+
+```textmate
+1. python >= 3.6
+2. pytorch >= 1.3.1
+3. pandas >= 1.0.1
+4. PyYAML >= 5.3    
+```
     
 ### 2. Filling in model parameters into [config/config.yml](config/config.yml)
 
 An example configuration file should be like this:
 
-    ```yaml
-    # general parameters
-    general:
-      seed: 2020
-      expert_batch_size: 2000
-      training_epochs: 1000000
-    
-    # parameters for general advantage estimation
-    gae:
-      gamma: 0.995
-      tau: 0.96
-    
-    # parameters for PPO algorithm
-    ppo:
-      clip_ratio: 0.1
-      ppo_optim_epochs: 1
-      ppo_mini_batch_size: 128
-      sample_batch_size: 5000
-    
-    # parameters for joint-policy
-    policy:
-      learning_rate: !!float 3e-4
-      trajectory_length: 10
-      num_states: 155
-      num_actions: 6
-      user:
-        num_states: 155
-        num_actions: 6
-        num_discrete_actions: 0
-        discrete_actions_sections: !!python/tuple [0]
-        action_log_std: 0.0
-        num_hiddens: !!python/tuple [256, 256]
-        activation: nn.LeaklyReLU
-        drop_rate: 0.5
-      env:
-        num_states: 161
-        num_actions: 155
-        num_discrete_actions: 132
-        discrete_actions_sections: !!python/tuple [5, 2, 4, 3, 2, 9, 2, 32, 35, 7, 2, 21, 2, 3, 3]
-        action_log_std: 0.0
-        num_hiddens: !!python/tuple [256, 256]
-        activation: nn.LeaklyReLU
-        drop_rate: 0.5
-    
-    # parameters for critic
-    value:
-      num_states: 155
-      num_hiddens: !!python/tuple [256, 256]
-      activation: nn.LeaklyReLU
-      drop_rate: 0.5
-      learning_rate: !!float 3e-3
-      l2_reg: !!float 1e-3
-    
-    # parameters for discriminator
-    discriminator:
-      num_states: 155
-      num_actions: 6
-      num_hiddens: !!python/tuple [256, 256]
-      activation: nn.LeaklyReLU
-      drop_rate: 0.5
-      learning_rate: !!float 1e-4
-    ```
+```yaml
+# general parameters
+general:
+  seed: 2020
+  expert_batch_size: 2000
+  training_epochs: 1000000
+
+# parameters for general advantage estimation
+gae:
+  gamma: 0.995
+  tau: 0.96
+
+# parameters for PPO algorithm
+ppo:
+  clip_ratio: 0.1
+  ppo_optim_epochs: 1
+  ppo_mini_batch_size: 128
+  sample_batch_size: 5000
+
+# parameters for joint-policy
+policy:
+  learning_rate: !!float 3e-4
+  trajectory_length: 10
+  num_states: 155
+  num_actions: 6
+  user:
+    num_states: 155
+    num_actions: 6
+    num_discrete_actions: 0
+    discrete_actions_sections: !!python/tuple [0]
+    action_log_std: 0.0
+    num_hiddens: !!python/tuple [256, 256]
+    activation: nn.LeaklyReLU
+    drop_rate: 0.5
+  env:
+    num_states: 161
+    num_actions: 155
+    num_discrete_actions: 132
+    discrete_actions_sections: !!python/tuple [5, 2, 4, 3, 2, 9, 2, 32, 35, 7, 2, 21, 2, 3, 3]
+    action_log_std: 0.0
+    num_hiddens: !!python/tuple [256, 256]
+    activation: nn.LeaklyReLU
+    drop_rate: 0.5
+
+# parameters for critic
+value:
+  num_states: 155
+  num_hiddens: !!python/tuple [256, 256]
+  activation: nn.LeaklyReLU
+  drop_rate: 0.5
+  learning_rate: !!float 3e-3
+  l2_reg: !!float 1e-3
+
+# parameters for discriminator
+discriminator:
+  num_states: 155
+  num_actions: 6
+  num_hiddens: !!python/tuple [256, 256]
+  activation: nn.LeaklyReLU
+  drop_rate: 0.5
+  learning_rate: !!float 1e-4
+```
 
 ## 3.Performance
 
