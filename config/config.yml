@@ -1,0 +1,55 @@
+general:
+  seed: 2020
+  expert_batch_size: 2000
+  training_epochs: 1000000
+
+gae:
+  gamma: 0.995
+  tau: 0.96
+
+ppo:
+  clip_ratio: 0.1
+  ppo_optim_epochs: 1
+  ppo_mini_batch_size: 128
+  sample_batch_size: 5000
+
+policy:
+  learning_rate: !!float 3e-4
+  trajectory_length: 10
+  num_states: 155
+  num_actions: 6
+  user:
+    num_states: 155
+    num_actions: 6
+    num_discrete_actions: 0
+    discrete_actions_sections: !!python/tuple [0]
+    action_log_std: 0.0
+    num_hiddens: !!python/tuple [256, 256]
+    activation: nn.LeaklyReLU
+    drop_rate: 0.5
+  env:
+    num_states: 161
+    num_actions: 155
+    num_discrete_actions: 132
+    discrete_actions_sections: !!python/tuple [5, 2, 4, 3, 2, 9, 2, 32, 35, 7, 2, 21, 2, 3, 3]
+    action_log_std: 0.0
+    num_hiddens: !!python/tuple [256, 256]
+    activation: nn.LeaklyReLU
+    drop_rate: 0.5
+
+value:
+  num_states: 155
+  num_hiddens: !!python/tuple [256, 256]
+  activation: nn.LeaklyReLU
+  drop_rate: 0.5
+  learning_rate: !!float 3e-3
+  l2_reg: !!float 1e-3
+
+
+discriminator:
+  num_states: 155
+  num_actions: 6
+  num_hiddens: !!python/tuple [256, 256]
+  activation: nn.LeaklyReLU
+  drop_rate: 0.5
+  learning_rate: !!float 1e-4
