@@ -108,7 +108,7 @@ in your experiments, luckily, almost all the tips and tricks applying to [GAN](h
 3. Generator Reward
 ![Generator Reward](https://tva1.sinaimg.cn/large/00831rSTgy1gcxbewooufj30w90bimxi.jpg)
 
-   As you can see, the algorithm is not perfect meet our expectation.Any how, it's Reinforcement Learning at all, just keep trying!!!
+As you can see, the algorithm is not perfect meet our expectation.Any how, it's Reinforcement Learning at all, just keep trying!!!
 
 ## 4.Reference
 
