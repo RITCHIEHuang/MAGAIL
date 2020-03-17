@@ -1,2 +1,6 @@
 log/
 model_pkl/
+.idea/
+.DS_Store
+*/__pycache__/
+data/test_data_sas.csv
