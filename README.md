@@ -112,6 +112,6 @@ As you can see, the algorithm is not perfect meet our expectation.Any how, it's 
 
 ## 4.Reference
 
-\[1\]. [Generative Adversarial Imitation Learning](https://arxiv.org/pdf/1606.03476.pdf))  
+\[1\]. [Generative Adversarial Imitation Learning](https://arxiv.org/pdf/1606.03476.pdf)    
 \[2\]. [Virtual-Taobao: Virtualizing real-world online retail environment for reinforcement learning](https://arxiv.org/pdf/1805.10000.pdf)  
 \[3\]. [Tricks of GANs](https://lanpartis.github.io/deep%20learning/2018/03/12/tricks-of-gans.html)  
