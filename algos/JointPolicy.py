@@ -9,7 +9,7 @@ from models.mlp_actor import Actor
 
 class JointPolicy(nn.Module):
     """
-    Joined Policy include:
+    Joint Policy include:
     user policy: (user_state,) -> user_action
     env policy: (user_state, user_action) -> user_next_state
     """
@@ -34,7 +34,7 @@ class JointPolicy(nn.Module):
                                 num_hiddens=self.config["env"]["num_hiddens"],
                                 drop_rate=self.config["env"]["drop_rate"])
 
-        # Joined policy generate trajectories sampling initial state from expert data
+        # Joint policy generate trajectories sampling initial state from expert data
         self.initial_user_state = initial_state
 
     def collect_samples(self, batch_size):

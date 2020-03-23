@@ -3,7 +3,7 @@
 import click
 import yaml
 
-from algos.MAIL import MAIL
+from algos.MAGAIL import MAGAIL
 from utils.time_util import timer
 
 
@@ -22,7 +22,7 @@ def main(expert_data_path, config_path, eval_model_epoch, save_model_epoch, save
     config = config_loader(path=config_path)  # load model configuration
     training_epochs = config["general"]["training_epochs"]
 
-    mail = MAIL(expert_data_path=expert_data_path, config=config, exp_name="./log/mail")
+    mail = MAGAIL(expert_data_path=expert_data_path, config=config, log_dir="./log")
 
     if load_model:
         mail.load_model(load_model_path)

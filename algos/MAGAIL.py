@@ -20,12 +20,12 @@ from algos.JointPolicy import JointPolicy
 from models.mlp_critic import Value
 from models.mlp_discriminator import Discriminator
 
-
-class MAIL:
-    def __init__(self, expert_data_path, config, exp_name):
+class MAGAIL:
+    def __init__(self, expert_data_path, config, log_dir):
         self.expert_data_path = expert_data_path
         self.config = config
-        self.exp_name = f"{exp_name}_{time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime())}"
+        self.exp_name = f"Magail_{time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime())}"
+        self.writer = SummaryWriter(log_dir=f"{log_dir}/{self.exp_name}")
 
         """seeding"""
         seed = self.config["general"]["seed"]
@@ -52,8 +52,6 @@ class MAIL:
 
         self.discriminator_func = nn.BCELoss()
 
-        self.writer = SummaryWriter(log_dir=self.exp_name)
-
     def _load_expert_data(self):
         num_expert_states = self.config["policy"]["num_states"]
         num_expert_actions = self.config["policy"]["num_actions"]
@@ -77,16 +75,34 @@ class MAIL:
         gen_batch_old_log_prob = torch.stack(gen_batch.log_prob)
         gen_batch_mask = torch.stack(gen_batch.mask)
 
+        # grad_collect_func = lambda d: torch.cat([grad.view(-1) for grad in torch.autograd.grad(d, self.D.parameters(), retain_graph=True)]).unsqueeze(0)
         ####################################################
         # update discriminator
         ####################################################
         for expert_batch_state, expert_batch_action in self.expert_data_loader:
+            # gaussian noise for Discriminator input is not necessary, it's a trick for tuning.
+            # noise_gen_state = torch.normal(0, self.config["general"]["noise_std"], size=gen_batch_state.size())
+            # noise_gen_action = torch.normal(0, self.config["general"]["noise_std"], size=gen_batch_action.size())
+            # noise_expert_state = torch.normal(0, self.config["general"]["noise_std"], size=expert_batch_state.size())
+            # noise_expert_action = torch.normal(0, self.config["general"]["noise_std"], size=expert_batch_action.size())
             gen_r = self.D(gen_batch_state, gen_batch_action)
             expert_r = self.D(expert_batch_state, expert_batch_action)
 
             e_loss = self.discriminator_func(expert_r, torch.ones_like(expert_r))
             g_loss = self.discriminator_func(gen_r, torch.zeros_like(gen_r))
             d_loss = e_loss + g_loss
+
+            # """ WGAN with Gradient Penalty"""
+            # d_loss = gen_r.mean() - expert_r.mean()
+            # differences_batch_state = gen_batch_state[:expert_batch_state.size(0)] - expert_batch_state
+            # differences_batch_action = gen_batch_action[:expert_batch_action.size(0)] - expert_batch_action
+            # alpha = torch.rand(expert_batch_state.size(0), 1)
+            # interpolates_batch_state = gen_batch_state[:expert_batch_state.size(0)] + (alpha * differences_batch_state)
+            # interpolates_batch_action = gen_batch_action[:expert_batch_action.size(0)] + (alpha * differences_batch_action)
+            # gradients = torch.cat([x for x in map(grad_collect_func, self.D(interpolates_batch_state, interpolates_batch_action))])
+            # slopes = torch.norm(gradients, p=2, dim=-1)
+            # gradient_penalty = torch.mean((slopes - 1.) ** 2)
+            # d_loss += 10 * gradient_penalty
 
             self.optimzer_discriminator.zero_grad()
             d_loss.backward()
@@ -97,10 +113,10 @@ class MAIL:
         self.writer.add_scalar('gen_r', gen_r.mean().item(), epoch)
 
         with torch.no_grad():
-            noise_gen_state = torch.normal(0, self.config["general"]["noise_std"], size=gen_batch_state.size())
-            noise_gen_action = torch.normal(0, self.config["general"]["noise_std"], size=gen_batch_action.size())
+            # noise_gen_state = torch.normal(0, self.config["general"]["noise_std"], size=gen_batch_state.size())
+            # noise_gen_action = torch.normal(0, self.config["general"]["noise_std"], size=gen_batch_action.size())
             gen_batch_value = self.V(gen_batch_state)
-            gen_batch_reward = self.D(gen_batch_state + noise_gen_state, gen_batch_action + noise_gen_action)
+            gen_batch_reward = self.D(gen_batch_state, gen_batch_action)
 
         gen_batch_advantage, gen_batch_return = estimate_advantages(gen_batch_reward, gen_batch_mask,
                                                                     gen_batch_value, self.config["gae"]["gamma"],
@@ -165,7 +181,7 @@ class MAIL:
 
     def save_model(self, save_path):
         # dump model from pkl file
-        pickle.dump((self.D, self.P, self.V), open(f"{save_path}/mail.pkl", 'wb'))
+        pickle.dump((self.D, self.P, self.V), open(f"{save_path}/{self.exp_name}.pkl", 'wb'))
 
     def load_model(self, model_path):
         # load entire model
