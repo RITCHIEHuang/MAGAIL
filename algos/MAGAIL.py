@@ -116,7 +116,7 @@ class MAGAIL:
             # noise_gen_state = torch.normal(0, self.config["general"]["noise_std"], size=gen_batch_state.size())
             # noise_gen_action = torch.normal(0, self.config["general"]["noise_std"], size=gen_batch_action.size())
             gen_batch_value = self.V(gen_batch_state)
-            gen_batch_reward = self.D(gen_batch_state, gen_batch_action)
+            gen_batch_reward = torch.log(self.D(gen_batch_state, gen_batch_action))
 
         gen_batch_advantage, gen_batch_return = estimate_advantages(gen_batch_reward, gen_batch_mask,
                                                                     gen_batch_value, self.config["gae"]["gamma"],
