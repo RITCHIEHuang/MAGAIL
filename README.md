@@ -37,6 +37,7 @@ general:
   seed: 2020
   expert_batch_size: 2000
   training_epochs: 1000000
+  noise_std: 0.15
 
 # parameters for general advantage estimation
 gae:
