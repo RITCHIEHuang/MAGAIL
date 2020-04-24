@@ -4,30 +4,6 @@ import torch
 
 from utils.torch_utils import FLOAT, device
 
-"""
-    reward = reward.reshape(-1, args.sample_traj_length, 1)
-    value = value.reshape(-1, args.sample_traj_length, 1)
-    mask = mask.reshape(-1, args.sample_traj_length, 1)
-
-    adv = FloatTensor(reward.shape, device=device)
-    delta = FloatTensor(reward.shape, device=device)
-
-    # pre_value, pre_adv = 0, 0
-    pre_value = torch.zeros((reward.shape[0], 1), device=device)
-    pre_adv = torch.zeros((reward.shape[0], 1), device=device)
-    for i in reversed(range(reward.shape[1])):
-        delta[:, i] = reward[:, i] + gamma * pre_value * mask[:, i] - value[:, i]
-        adv[:, i] = delta[:, i] + gamma * lam * pre_adv * mask[:, i]
-        pre_adv = adv[:, i, ...]
-        pre_value = value[:, i, ...]
-    returns = value + adv
-    adv = (adv - adv.mean()) / adv.std()
-    returns = returns.reshape(-1, 1)
-    adv = adv.reshape(-1, 1)
-
-    return adv, returns
-"""
-
 
 def estimate_advantages(rewards, masks, values, gamma, tau, trajectory_length):
     """
