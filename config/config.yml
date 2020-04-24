@@ -1,6 +1,8 @@
 general:
   seed: 2020
   expert_batch_size: 2000
+  expert_train_data_path: ./data/train_data_sas.csv
+  expert_test_data_path: ./data/test_data_sas.csv
   training_epochs: 1000000
   noise_std: 0.15
 
@@ -10,13 +12,13 @@ gae:
 
 ppo:
   clip_ratio: 0.1
-  ppo_optim_epochs: 3
-  ppo_mini_batch_size: 256
-  sample_batch_size: 5000
+  ppo_optim_epochs: 1
+  ppo_mini_batch_size: 200
+  sample_batch_size: 2000
 
 policy:
   learning_rate: !!float 3e-4
-  trajectory_length: 20
+  trajectory_length: 10
   num_states: 155
   num_actions: 6
   user:
@@ -25,7 +27,7 @@ policy:
     num_discrete_actions: 0
     discrete_actions_sections: !!python/tuple [0]
     action_log_std: 0.0
-    num_hiddens: !!python/tuple [256, 256]
+    num_hiddens: !!python/tuple [256]
     activation: nn.LeaklyReLU
     drop_rate: 0.5
   env:
@@ -34,7 +36,7 @@ policy:
     num_discrete_actions: 132
     discrete_actions_sections: !!python/tuple [5, 2, 4, 3, 2, 9, 2, 32, 35, 7, 2, 21, 2, 3, 3]
     action_log_std: 0.0
-    num_hiddens: !!python/tuple [256, 256]
+    num_hiddens: !!python/tuple [256]
     activation: nn.LeaklyReLU
     drop_rate: 0.5
 

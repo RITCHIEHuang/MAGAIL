@@ -3,26 +3,27 @@
 import math
 import multiprocessing
 import pickle
+import time
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader
-
-import time
-import numpy as np
+from torch.utils.tensorboard import SummaryWriter
 
 from algos.GAE import estimate_advantages
+from algos.JointPolicy import JointPolicy
 from algos.ppo_step import ppo_step
 from data.ExpertDataSet import ExpertDataSet
-from algos.JointPolicy import JointPolicy
 from models.mlp_critic import Value
 from models.mlp_discriminator import Discriminator
 
+trans_shape_func = lambda x: x.reshape(x.shape[0] * x.shape[1], -1)
+
+
 class MAGAIL:
-    def __init__(self, expert_data_path, config, log_dir):
-        self.expert_data_path = expert_data_path
+    def __init__(self, config, log_dir):
         self.config = config
         self.exp_name = f"Magail_{time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime())}"
         self.writer = SummaryWriter(log_dir=f"{log_dir}/{self.exp_name}")
@@ -39,8 +40,8 @@ class MAGAIL:
         self.V = Value(num_states=self.config["value"]["num_states"],
                        num_hiddens=self.config["value"]["num_hiddens"],
                        drop_rate=self.config["value"]["drop_rate"])
-        self.P = JointPolicy(initial_state=self.expert_data_set.state,
-                              config=self.config["policy"])
+        self.P = JointPolicy(initial_state=self.expert_train_dataset.state,
+                             config=self.config["policy"])
         self.D = Discriminator(num_states=self.config["discriminator"]["num_states"],
                                num_actions=self.config["discriminator"]["num_actions"],
                                num_hiddens=self.config["discriminator"]["num_hiddens"],
@@ -48,18 +49,28 @@ class MAGAIL:
 
         self.optimizer_policy = optim.Adam(self.P.parameters(), lr=self.config["policy"]["learning_rate"])
         self.optimizer_value = optim.Adam(self.V.parameters(), lr=self.config["value"]["learning_rate"])
-        self.optimzer_discriminator = optim.Adam(self.D.parameters(), lr=self.config["discriminator"]["learning_rate"])
+        self.optimizer_discriminator = optim.Adam(self.D.parameters(), lr=self.config["discriminator"]["learning_rate"])
 
         self.discriminator_func = nn.BCELoss()
 
     def _load_expert_data(self):
         num_expert_states = self.config["policy"]["num_states"]
         num_expert_actions = self.config["policy"]["num_actions"]
-        self.expert_data_set = ExpertDataSet(data_set_path=self.expert_data_path, num_states=num_expert_states,
-                                             num_actions=num_expert_actions)
         expert_batch_size = self.config["general"]["expert_batch_size"]
-        self.expert_data_loader = DataLoader(dataset=self.expert_data_set, batch_size=expert_batch_size,
-                                             shuffle=True, num_workers=multiprocessing.cpu_count() // 2)
+
+        self.expert_train_data_path = self.config["general"]["expert_train_data_path"]
+        self.expert_test_data_path = self.config["general"]["expert_test_data_path"]
+        self.expert_train_dataset = ExpertDataSet(data_set_path=self.expert_train_data_path,
+                                                  num_states=num_expert_states,
+                                                  num_actions=num_expert_actions)
+        self.expert_test_dataset = ExpertDataSet(data_set_path=self.expert_test_data_path,
+                                                 num_states=num_expert_states,
+                                                 num_actions=num_expert_actions)
+        self.expert_train_dataloader = DataLoader(dataset=self.expert_train_dataset, batch_size=expert_batch_size,
+                                                  shuffle=True, num_workers=multiprocessing.cpu_count() // 2)
+        self.expert_test_dataloader = DataLoader(dataset=self.expert_test_dataset,
+                                                 batch_size=len(self.expert_test_dataset),
+                                                 num_workers=multiprocessing.cpu_count() // 2)
 
     def train(self, epoch):
         self.P.train()
@@ -69,17 +80,21 @@ class MAGAIL:
         # collect generated batch
         gen_batch = self.P.collect_samples(self.config["ppo"]["sample_batch_size"])
         # batch: ('state', 'action', 'next_state', 'log_prob', 'mask')
-        gen_batch_state = torch.stack(gen_batch.state)
-        gen_batch_action = torch.stack(gen_batch.action)
-        gen_batch_next_state = torch.stack(gen_batch.next_state)
-        gen_batch_old_log_prob = torch.stack(gen_batch.log_prob)
-        gen_batch_mask = torch.stack(gen_batch.mask)
+        gen_batch_state = trans_shape_func(
+            torch.stack(gen_batch.state))  # [trajectory length * parallel size, state size]
+        gen_batch_action = trans_shape_func(
+            torch.stack(gen_batch.action))  # [trajectory length * parallel size, action size]
+        gen_batch_next_state = trans_shape_func(
+            torch.stack(gen_batch.next_state))  # [trajectory length * parallel size, state size]
+        gen_batch_old_log_prob = trans_shape_func(
+            torch.stack(gen_batch.log_prob))  # [trajectory length * parallel size, 1]
+        gen_batch_mask = trans_shape_func(torch.stack(gen_batch.mask))  # [trajectory length * parallel size, 1]
 
         # grad_collect_func = lambda d: torch.cat([grad.view(-1) for grad in torch.autograd.grad(d, self.D.parameters(), retain_graph=True)]).unsqueeze(0)
         ####################################################
         # update discriminator
         ####################################################
-        for expert_batch_state, expert_batch_action in self.expert_data_loader:
+        for expert_batch_state, expert_batch_action in self.expert_train_dataloader:
             # gaussian noise for Discriminator input is not necessary, it's a trick for tuning.
             # noise_gen_state = torch.normal(0, self.config["general"]["noise_std"], size=gen_batch_state.size())
             # noise_gen_action = torch.normal(0, self.config["general"]["noise_std"], size=gen_batch_action.size())
@@ -104,9 +119,9 @@ class MAGAIL:
             # gradient_penalty = torch.mean((slopes - 1.) ** 2)
             # d_loss += 10 * gradient_penalty
 
-            self.optimzer_discriminator.zero_grad()
+            self.optimizer_discriminator.zero_grad()
             d_loss.backward()
-            self.optimzer_discriminator.step()
+            self.optimizer_discriminator.step()
 
         self.writer.add_scalar('d_loss', d_loss.item(), epoch)
         self.writer.add_scalar('expert_r', expert_r.mean().item(), epoch)
@@ -116,11 +131,12 @@ class MAGAIL:
             # noise_gen_state = torch.normal(0, self.config["general"]["noise_std"], size=gen_batch_state.size())
             # noise_gen_action = torch.normal(0, self.config["general"]["noise_std"], size=gen_batch_action.size())
             gen_batch_value = self.V(gen_batch_state)
-            gen_batch_reward = torch.log(self.D(gen_batch_state, gen_batch_action))
+            gen_batch_reward = self.D(gen_batch_state, gen_batch_action)
 
         gen_batch_advantage, gen_batch_return = estimate_advantages(gen_batch_reward, gen_batch_mask,
                                                                     gen_batch_value, self.config["gae"]["gamma"],
-                                                                    self.config["gae"]["tau"])
+                                                                    self.config["gae"]["tau"],
+                                                                    self.config["policy"]["trajectory_length"])
 
         ####################################################
         # update policy by ppo [mini_batch]
@@ -169,15 +185,13 @@ class MAGAIL:
         gen_batch_state = torch.stack(gen_batch.state)
         gen_batch_action = torch.stack(gen_batch.action)
 
-        for expert_batch_state, expert_batch_action in self.expert_data_loader:
+        for expert_batch_state, expert_batch_action in self.expert_test_dataloader:
             gen_r = self.D(gen_batch_state, gen_batch_action)
             expert_r = self.D(expert_batch_state, expert_batch_action)
 
             print(f" Evaluating episode:{epoch} ".center(80, "-"))
             print('gen_r:', gen_r.mean().item())
             print('expert_r:', expert_r.mean().item())
-
-            break
 
     def save_model(self, save_path):
         # dump model from pkl file

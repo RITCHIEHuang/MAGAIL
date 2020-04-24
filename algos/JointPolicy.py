@@ -40,7 +40,7 @@ class JointPolicy(nn.Module):
     def collect_samples(self, batch_size):
         """
         generate trajectories following current policy
-        accelerate by parallelizing the process
+        accelerate by parallel the process
         :param batch_size:
         :return:
         """
@@ -63,14 +63,13 @@ class JointPolicy(nn.Module):
 
             mask = torch.ones_like(env_action_log_prob) if i % self.trajectory_length == 0 else torch.zeros_like(
                 env_action_log_prob)
-            mask = mask.float()
 
-            # memory.push(user_state, user_action, env_action, user_action_log_prob + env_action_log_prob, mask)
+            memory.push(user_state, user_action, env_action, user_action_log_prob + env_action_log_prob, mask)
 
-            # to re-use original gae code
-            for u_s, u_a, e_a, u_a_p, e_a_p, m in zip(user_state, user_action, env_action, user_action_log_prob,
-                                                      env_action_log_prob, mask):
-                memory.push(u_s, u_a, e_a, u_a_p + e_a_p, m)
+            # # to re-use original gae code
+            # for u_s, u_a, e_a, u_a_p, e_a_p, m in zip(user_state, user_action, env_action, user_action_log_prob,
+            #                                           env_action_log_prob, mask):
+            #     memory.push(u_s, u_a, e_a, u_a_p + e_a_p, m)
 
         return memory.sample()
 

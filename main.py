@@ -8,8 +8,6 @@ from utils.time_util import timer
 
 
 @click.command()
-@click.option("--expert_data_path", type=str, default="./data/train_data_sas.csv",
-              help="Path for expert trajectory data")
 @click.option("--config_path", type=str, default="./config/config.yml",
               help="Path for model configuration")
 @click.option("--eval_model_epoch", type=int, default=50, help="Intervals for evaluating model")
@@ -17,12 +15,12 @@ from utils.time_util import timer
 @click.option("--save_model_path", type=str, default="./model_pkl", help="Path for saving trained model")
 @click.option("--load_model", type=bool, default=False, help="Indicator for whether load trained model")
 @click.option("--load_model_path", type=str, default=None, help="Path for loading trained model")
-def main(expert_data_path, config_path, eval_model_epoch, save_model_epoch, save_model_path, load_model,
+def main(config_path, eval_model_epoch, save_model_epoch, save_model_path, load_model,
          load_model_path):
     config = config_loader(path=config_path)  # load model configuration
     training_epochs = config["general"]["training_epochs"]
 
-    mail = MAGAIL(expert_data_path=expert_data_path, config=config, log_dir="./log")
+    mail = MAGAIL(config=config, log_dir="./log")
 
     if load_model:
         mail.load_model(load_model_path)
