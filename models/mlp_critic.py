@@ -22,9 +22,11 @@ class Value(nn.Module):
         # set up module layers
         self._module_list = nn.ModuleList()
         for idx, module_unit in enumerate(self._layers_units):
-            self._module_list.add_module(f"Layer_{idx + 1}_Linear", nn.Linear(*module_unit))
+            n_units_in, n_units_out = module_unit
+            self._module_list.add_module(f"Layer_{idx + 1}_Linear", nn.Linear(n_units_in, n_units_out))
             if idx != len(self._layers_units) - 1:
                 self._module_list.add_module(f"Layer_{idx + 1}_Activation", activation())
+                self._module_list.add_module(f"Layer_{idx + 1}_LayerNorm", nn.LayerNorm(n_units_out))
             if self.drop_rate and idx != len(self._layers_units) - 1:
                 self._module_list.add_module(f"Layer_{idx + 1}_Dropout", nn.Dropout(self.drop_rate))
 
@@ -37,4 +39,3 @@ class Value(nn.Module):
         for module in self._module_list:
             x = module(x)
         return x
-

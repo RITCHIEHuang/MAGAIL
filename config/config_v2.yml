@@ -58,5 +58,5 @@ discriminator:
   activation: nn.LeaklyReLU
   drop_rate: 0.5
   learning_rate: !!float 3e-4
-  use_noise: False
+  use_noise: True
   noise_std: 0.12

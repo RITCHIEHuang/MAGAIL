@@ -3,12 +3,13 @@
 import click
 import yaml
 
-from algos.MAGAIL import MAGAIL
+# from algos.MAGAIL import MAGAIL
+from algos.MAGAIL_v2 import MAGAIL
 from utils.time_util import timer
 
 
 @click.command()
-@click.option("--config_path", type=str, default="./config/config.yml",
+@click.option("--config_path", type=str, default="./config/config_v2.yml",
               help="Path for model configuration")
 @click.option("--eval_model_epoch", type=int, default=50, help="Intervals for evaluating model")
 @click.option("--save_model_epoch", type=int, default=50, help="Intervals for saving model")
@@ -28,7 +29,7 @@ def main(config_path, eval_model_epoch, save_model_epoch, save_model_path, load_
     for epoch in range(1, training_epochs + 1):
         mail.train(epoch)
 
-        if epoch % eval_model_epoch == 0:
+        if config["general"]["use_eval"] and epoch % eval_model_epoch == 0:
             mail.eval(epoch)
 
         if epoch % save_model_epoch == 0:

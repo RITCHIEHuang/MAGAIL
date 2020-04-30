@@ -59,14 +59,16 @@ class Actor(nn.Module):
             n_units_in, n_units_out = module_unit
             self._module_list.add_module(f"Layer_{idx + 1}_Linear", nn.Linear(n_units_in, n_units_out))
             if idx != len(self._layers_units) - 1:
-                # self._module_list.add_module(f"Layer_{idx + 1}_LayerNorm", nn.LayerNorm(n_units_out))
                 self._module_list.add_module(f"Layer_{idx + 1}_Activation", activation())
+                self._module_list.add_module(f"Layer_{idx + 1}_LayerNorm", nn.LayerNorm(n_units_out))
             if self.drop_rate and idx != len(self._layers_units) - 1:
                 self._module_list.add_module(f"Layer_{idx + 1}_Dropout", nn.Dropout(self.drop_rate))
 
+        self._module_list.add_module(f"Layer_{idx + 1}_Activation", nn.Tanh())
         # if there's discrete actions, add custom Soft Max layer
         if self.num_discrete_actions:
-            self._module_list.add_module(f"Layer_{idx + 1}_Custom_Softmax", MultiSoftMax(0, self.num_discrete_actions, self.discrete_action_sections))
+            self._module_list.add_module(f"Layer_{idx + 1}_Custom_Softmax",
+                                         MultiSoftMax(0, self.num_discrete_actions, self.discrete_action_sections))
 
     def forward(self, x):
         """

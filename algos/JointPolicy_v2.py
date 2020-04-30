@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 
 from algos.Memory import Memory
-from models.mlp_actor import Actor
+from models.mlp_actor_v2 import Actor
 
 
 class JointPolicy(nn.Module):

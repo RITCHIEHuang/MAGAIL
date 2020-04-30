@@ -2,7 +2,6 @@
 # Created at 2020/3/10
 import math
 import multiprocessing
-import pickle
 import time
 
 import numpy as np
@@ -13,7 +12,7 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from algos.GAE import estimate_advantages
-from algos.JointPolicy import JointPolicy
+from algos.JointPolicy_v2 import JointPolicy
 from algos.ppo_step import ppo_step
 from data.ExpertDataSet import ExpertDataSet
 from models.mlp_critic import Value
@@ -50,9 +49,18 @@ class MAGAIL:
                                use_noise=self.config["discriminator"]["use_noise"],
                                noise_std=self.config["discriminator"]["noise_std"])
 
+        print("Model Structure")
+        print(self.P)
+        print(self.V)
+        print(self.D)
+        print()
+
         self.optimizer_policy = optim.Adam(self.P.parameters(), lr=self.config["policy"]["learning_rate"])
         self.optimizer_value = optim.Adam(self.V.parameters(), lr=self.config["value"]["learning_rate"])
         self.optimizer_discriminator = optim.Adam(self.D.parameters(), lr=self.config["discriminator"]["learning_rate"])
+        self.scheduler_descriminator = optim.lr_scheduler.StepLR(self.optimizer_discriminator,
+                                                                 step_size=2000,
+                                                                 gamma=0.95)
 
         self.discriminator_func = nn.BCELoss()
 
@@ -123,9 +131,11 @@ class MAGAIL:
             d_loss.backward()
             self.optimizer_discriminator.step()
 
-        self.writer.add_scalar('d_loss', d_loss.item(), epoch)
-        self.writer.add_scalar('expert_r', expert_r.mean().item(), epoch)
-        self.writer.add_scalar('gen_r', gen_r.mean().item(), epoch)
+            self.scheduler_descriminator.step()
+
+        self.writer.add_scalar('loss/d_loss', d_loss.item(), epoch)
+        self.writer.add_scalar('reward/expert_r', expert_r.mean().item(), epoch)
+        self.writer.add_scalar('reward/gen_r', gen_r.mean().item(), epoch)
 
         with torch.no_grad():
             gen_batch_value = self.V(gen_batch_state)
@@ -166,8 +176,8 @@ class MAGAIL:
                                           ppo_clip_ratio=self.config["ppo"]["clip_ratio"],
                                           value_l2_reg=self.config["value"]["l2_reg"])
 
-                self.writer.add_scalar('p_loss', p_loss, epoch)
-                self.writer.add_scalar('v_loss', v_loss, epoch)
+                self.writer.add_scalar('loss/p_loss', p_loss, epoch)
+                self.writer.add_scalar('loss/v_loss', v_loss, epoch)
 
         print(f" Training episode:{epoch} ".center(80, "#"))
         print('gen_r:', gen_r.mean().item())
@@ -193,8 +203,10 @@ class MAGAIL:
 
     def save_model(self, save_path):
         # dump model from pkl file
-        pickle.dump((self.D, self.P, self.V), open(f"{save_path}/{self.exp_name}.pkl", 'wb'))
+        torch.save((self.D, self.P, self.V), f"{save_path}/{self.exp_name}.pt")
+        # pickle.dump((self.D, self.P, self.V), open(f"{save_path}/{self.exp_name}.pkl", 'wb'))
 
     def load_model(self, model_path):
         # load entire model
-        self.D, self.P, self.V = pickle.load(open(model_path, 'wb'))
+        self.D, self.P, self.V = torch.load(f"{model_path}", map_location=device)
+        # self.D, self.P, self.V = pickle.load(open(model_path, 'wb'))
