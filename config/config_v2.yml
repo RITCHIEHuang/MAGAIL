@@ -13,8 +13,8 @@ gae:
 ppo:
   clip_ratio: 0.1
   ppo_optim_epochs: 1
-  ppo_mini_batch_size: 500
-  sample_batch_size: 5000
+  ppo_mini_batch_size: 200
+  sample_batch_size: 2000
 
 policy:
   learning_rate: !!float 3e-4
