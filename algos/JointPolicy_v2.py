@@ -82,3 +82,8 @@ class JointPolicy(nn.Module):
         env_action_log_prob = self.env_policy.get_log_prob(env_states, next_states)
 
         return user_action_log_prob + env_action_log_prob
+
+    def get_next_state(self, states, actions):
+        state_actions = torch.cat([states, actions], dim=-1)
+        next_state, _ = self.env_policy.get_action_log_prob(state_actions)
+        return next_state

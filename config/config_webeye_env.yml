@@ -1,4 +1,5 @@
 dataset_path: ./data/train_data_sas.csv
+reward_index: 139
 observation:
   space: 155
   discrete_space: 132

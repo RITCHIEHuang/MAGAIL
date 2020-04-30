@@ -202,10 +202,14 @@ class MAGAIL:
 
     def save_model(self, save_path):
         # dump model from pkl file
-        torch.save((self.D, self.P, self.V), f"{save_path}/{self.exp_name}.pt")
-        # pickle.dump((self.D, self.P, self.V), open(f"{save_path}/{self.exp_name}.pkl", 'wb'))
+        # torch.save((self.D, self.P, self.V), f"{save_path}/{self.exp_name}.pt")
+        torch.save(self.D, f"{save_path}/{self.exp_name}_Discriminator.pt")
+        torch.save(self.P, f"{save_path}/{self.exp_name}_JointPolicy.pt")
+        torch.save(self.V, f"{save_path}/{self.exp_name}_Value.pt")
 
     def load_model(self, model_path):
         # load entire model
-        self.D, self.P, self.V = torch.load(f"{model_path}", map_location=device)
-        # self.D, self.P, self.V = pickle.load(open(model_path, 'wb'))
+        # self.D, self.P, self.V = torch.save((self.D, self.P, self.V), f"{save_path}/{self.exp_name}.pt")
+        self.D = torch.load(f"{model_path}_Discriminator.pt", map_location=device)
+        self.P = torch.load(f"{model_path}_JointPolicy.pt", map_location=device)
+        self.V = torch.load(f"{model_path}_Value.pt", map_location=device)
