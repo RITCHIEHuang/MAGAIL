@@ -2,7 +2,6 @@
 # Created at 2020/3/10
 import math
 import multiprocessing
-import time
 
 import numpy as np
 import torch
@@ -23,9 +22,9 @@ trans_shape_func = lambda x: x.reshape(x.shape[0] * x.shape[1], -1)
 
 
 class MAGAIL:
-    def __init__(self, config, log_dir):
+    def __init__(self, config, log_dir, exp_name):
         self.config = config
-        self.exp_name = f"Magail_{time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime())}"
+        self.exp_name = exp_name
         self.writer = SummaryWriter(log_dir=f"{log_dir}/{self.exp_name}")
 
         """seeding"""

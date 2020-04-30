@@ -2,31 +2,39 @@
 # Created at 2020/3/14
 import click
 import yaml
-
+import time
+from tqdm import tqdm
 # from algos.MAGAIL import MAGAIL
 from algos.MAGAIL_v2 import MAGAIL
 from utils.time_util import timer
 
 
 @click.command()
-@click.option("--config_path", type=str, default="./config/config_v2.yml",
-              help="Path for model configuration")
+@click.option("--train_mode", type=bool, default=True, help="Train / Validation")
 @click.option("--eval_model_epoch", type=int, default=50, help="Intervals for evaluating model")
 @click.option("--save_model_epoch", type=int, default=50, help="Intervals for saving model")
 @click.option("--save_model_path", type=str, default="./model_pkl", help="Path for saving trained model")
 @click.option("--load_model", type=bool, default=False, help="Indicator for whether load trained model")
 @click.option("--load_model_path", type=str, default=None, help="Path for loading trained model")
-def main(config_path, eval_model_epoch, save_model_epoch, save_model_path, load_model,
+def main(train_mode, eval_model_epoch, save_model_epoch, save_model_path, load_model,
          load_model_path):
+
+    if train_mode:
+        config_path = "./config/config_v2.yml"
+        exp_name = f"MAGAIL_Train_{time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime())}"
+    else:
+        config_path = "./config/config_v2_validation.yml"
+        exp_name = f"MAGAIL_Validation_{time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime())}"
+
     config = config_loader(path=config_path)  # load model configuration
     training_epochs = config["general"]["training_epochs"]
 
-    mail = MAGAIL(config=config, log_dir="./log")
+    mail = MAGAIL(config=config, log_dir="./log", exp_name=exp_name)
 
     if load_model:
         mail.load_model(load_model_path)
 
-    for epoch in range(1, training_epochs + 1):
+    for epoch in tqdm(range(1, training_epochs + 1)):
         mail.train(epoch)
 
         if config["general"]["use_eval"] and epoch % eval_model_epoch == 0:
