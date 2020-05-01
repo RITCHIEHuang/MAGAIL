@@ -10,12 +10,12 @@ from utils.time_util import timer
 
 
 @click.command()
-@click.option("--train_mode", type=bool, default=True, help="Train / Validation")
-@click.option("--eval_model_epoch", type=int, default=50, help="Intervals for evaluating model")
-@click.option("--save_model_epoch", type=int, default=50, help="Intervals for saving model")
+@click.option("--train_mode", type=bool, default=True, help="Train / Validate")
+@click.option("--eval_model_epoch", type=int, default=1, help="Intervals for evaluating model")
+@click.option("--save_model_epoch", type=int, default=1000, help="Intervals for saving model")
 @click.option("--save_model_path", type=str, default="./model_pkl", help="Path for saving trained model")
-@click.option("--load_model", type=bool, default=False, help="Indicator for whether load trained model")
-@click.option("--load_model_path", type=str, default=None, help="Path for loading trained model")
+@click.option("--load_model", type=bool, default=True, help="Indicator for whether load trained model")
+@click.option("--load_model_path", type=str, default="./model_pkl/MAGAIL_Train_2020-05-01_17:24:46", help="Path for loading trained model")
 def main(train_mode, eval_model_epoch, save_model_epoch, save_model_path, load_model,
          load_model_path):
 
@@ -24,7 +24,7 @@ def main(train_mode, eval_model_epoch, save_model_epoch, save_model_path, load_m
         exp_name = f"MAGAIL_Train_{time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime())}"
     else:
         config_path = "./config/config_v2_validation.yml"
-        exp_name = f"MAGAIL_Validation_{time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime())}"
+        exp_name = f"MAGAIL_Validate_{time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime())}"
 
     config = config_loader(path=config_path)  # load model configuration
     training_epochs = config["general"]["training_epochs"]
@@ -37,7 +37,7 @@ def main(train_mode, eval_model_epoch, save_model_epoch, save_model_path, load_m
     for epoch in tqdm(range(1, training_epochs + 1)):
         mail.train(epoch)
 
-        if config["general"]["use_eval"] and epoch % eval_model_epoch == 0:
+        if epoch % eval_model_epoch == 0:
             mail.eval(epoch)
 
         if epoch % save_model_epoch == 0:

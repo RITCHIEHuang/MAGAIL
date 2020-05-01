@@ -1,10 +1,8 @@
 general:
   seed: 2020
   expert_batch_size: 500
-  expert_train_data_path: ./data/test_data_sas.csv
-  expert_test_data_path: ./data/test_data_sas.csv
-  use_eval: False
-  training_epochs: 1000000
+  expert_data_path: ./data/test_data_sas.csv
+  training_epochs: 500000
 
 gae:
   gamma: 0.995

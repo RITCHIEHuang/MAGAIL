@@ -41,7 +41,7 @@ class MAGAIL:
         self.V = Value(num_states=self.config["value"]["num_states"],
                        num_hiddens=self.config["value"]["num_hiddens"],
                        drop_rate=self.config["value"]["drop_rate"])
-        self.P = JointPolicy(initial_state=self.expert_train_dataset.state.to(device),
+        self.P = JointPolicy(initial_state=self.expert_dataset.state.to(device),
                              config=self.config["policy"])
         self.D = Discriminator(num_states=self.config["discriminator"]["num_states"],
                                num_actions=self.config["discriminator"]["num_actions"],
@@ -63,19 +63,13 @@ class MAGAIL:
         num_expert_actions = self.config["policy"]["num_actions"]
         expert_batch_size = self.config["general"]["expert_batch_size"]
 
-        self.expert_train_data_path = self.config["general"]["expert_train_data_path"]
-        self.expert_test_data_path = self.config["general"]["expert_test_data_path"]
-        self.expert_train_dataset = ExpertDataSet(data_set_path=self.expert_train_data_path,
-                                                  num_states=num_expert_states,
-                                                  num_actions=num_expert_actions)
-        self.expert_test_dataset = ExpertDataSet(data_set_path=self.expert_test_data_path,
-                                                 num_states=num_expert_states,
-                                                 num_actions=num_expert_actions)
-        self.expert_train_dataloader = DataLoader(dataset=self.expert_train_dataset, batch_size=expert_batch_size,
-                                                  shuffle=True, num_workers=multiprocessing.cpu_count() // 2)
-        self.expert_test_dataloader = DataLoader(dataset=self.expert_test_dataset,
-                                                 batch_size=len(self.expert_test_dataset),
-                                                 num_workers=multiprocessing.cpu_count() // 2)
+        self.expert_dataset = ExpertDataSet(data_set_path=self.config["general"]["expert_data_path"],
+                                            num_states=num_expert_states,
+                                            num_actions=num_expert_actions)
+        self.expert_data_loader = DataLoader(dataset=self.expert_dataset,
+                                             batch_size=expert_batch_size,
+                                             shuffle=True,
+                                             num_workers=multiprocessing.cpu_count() // 2)
 
     def train(self, epoch):
         self.P.train()
@@ -99,7 +93,7 @@ class MAGAIL:
         ####################################################
         # update discriminator
         ####################################################
-        for expert_batch_state, expert_batch_action in self.expert_train_dataloader:
+        for expert_batch_state, expert_batch_action in self.expert_data_loader:
             gen_r = self.D(gen_batch_state, gen_batch_action)
             expert_r = self.D(expert_batch_state.to(device), expert_batch_action.to(device))
 
@@ -123,9 +117,9 @@ class MAGAIL:
             d_loss.backward()
             self.optimizer_discriminator.step()
 
-        self.writer.add_scalar('d_loss', d_loss.item(), epoch)
-        self.writer.add_scalar('expert_r', expert_r.mean().item(), epoch)
-        self.writer.add_scalar('gen_r', gen_r.mean().item(), epoch)
+        self.writer.add_scalar('train/loss/d_loss', d_loss.item(), epoch)
+        self.writer.add_scalar('train/reward/expert_r', expert_r.mean().item(), epoch)
+        self.writer.add_scalar('train/reward/gen_r', gen_r.mean().item(), epoch)
 
         with torch.no_grad():
             gen_batch_value = self.V(gen_batch_state)
@@ -151,10 +145,8 @@ class MAGAIL:
                 ind = perm[slice(i * ppo_mini_batch_size,
                                  min((i + 1) * ppo_mini_batch_size, gen_batch_size))]
                 mini_batch_state, mini_batch_action, mini_batch_next_state, mini_batch_advantage, mini_batch_return, \
-                mini_batch_old_log_prob = gen_batch_state[ind], gen_batch_action[ind], \
-                                          gen_batch_next_state[ind], \
-                                          gen_batch_advantage[ind], \
-                                          gen_batch_return[ind], gen_batch_old_log_prob[ind]
+                    mini_batch_old_log_prob = gen_batch_state[ind], gen_batch_action[ind], gen_batch_next_state[ind], \
+                    gen_batch_advantage[ind], gen_batch_return[ind], gen_batch_old_log_prob[ind]
 
                 v_loss, p_loss = ppo_step(self.P, self.V, self.optimizer_policy, self.optimizer_value,
                                           states=mini_batch_state,
@@ -166,8 +158,8 @@ class MAGAIL:
                                           ppo_clip_ratio=self.config["ppo"]["clip_ratio"],
                                           value_l2_reg=self.config["value"]["l2_reg"])
 
-                self.writer.add_scalar('p_loss', p_loss, epoch)
-                self.writer.add_scalar('v_loss', v_loss, epoch)
+                self.writer.add_scalar('train/loss/p_loss', p_loss, epoch)
+                self.writer.add_scalar('train/loss/v_loss', v_loss, epoch)
 
         print(f" Training episode:{epoch} ".center(80, "#"))
         print('gen_r:', gen_r.mean().item())
@@ -183,7 +175,7 @@ class MAGAIL:
         gen_batch_state = torch.stack(gen_batch.state)
         gen_batch_action = torch.stack(gen_batch.action)
 
-        for expert_batch_state, expert_batch_action in self.expert_test_dataloader:
+        for expert_batch_state, expert_batch_action in self.expert_data_loader:
             gen_r = self.D(gen_batch_state, gen_batch_action)
             expert_r = self.D(expert_batch_state.to(device), expert_batch_action.to(device))
 
