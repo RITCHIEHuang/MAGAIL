@@ -9,7 +9,7 @@ from torch.distributions import Categorical
 from custom.MultiCategorical import MultiCategorical
 
 
-class MultiCategoricalTest(unittest.TestCase):
+class TestMultiCategorical(unittest.TestCase):
 
     def setUp(self) -> None:
         self.test_probs = torch.tensor([[0.3, 0.2, 0.4, 0.1, 0.25, 0.5, 0.25, 0.3, 0.4, 0.1, 0.1, 0.1],

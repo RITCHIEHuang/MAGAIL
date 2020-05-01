@@ -7,7 +7,7 @@ from typing import Tuple
 import torch
 import torch.nn as nn
 
-from utils.torch_utils import device
+from utils.torch_util import device
 
 
 class Discriminator(nn.Module):

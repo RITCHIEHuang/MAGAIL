@@ -9,7 +9,7 @@ import torch.nn.functional as F
 from custom.MultiSoftMax import MultiSoftMax
 
 
-class MultiSoftMaxTest(unittest.TestCase):
+class TestMultiSoftMax(unittest.TestCase):
 
     def test_multi_softmax_head(self):
         """

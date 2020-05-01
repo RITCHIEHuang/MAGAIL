@@ -3,6 +3,7 @@
    This repo contains a general `MAGAIL` implementation, it's useful when learning a **Joint-policy** : 
 mixing `agent policy` and `environment policy` together.  The `Agent` can interact with `Environment` by taking action according to the state given by the `Environment`, 
 and the `Environment` sends state according to agent's action.
+   
 
 ## 1.Formulation of Joint-policy
 
@@ -36,8 +37,8 @@ An example configuration file should be like this:
 general:
   seed: 2020
   expert_batch_size: 2000
-  training_epochs: 1000000
-  noise_std: 0.15
+  expert_data_path: ./data/train_data_sas.csv
+  training_epochs: 500000
 
 # parameters for general advantage estimation
 gae:
@@ -48,7 +49,7 @@ gae:
 ppo:
   clip_ratio: 0.1
   ppo_optim_epochs: 1
-  ppo_mini_batch_size: 128
+  ppo_mini_batch_size: 500
   sample_batch_size: 5000
 
 # parameters for joint-policy
@@ -63,7 +64,8 @@ policy:
     num_discrete_actions: 0
     discrete_actions_sections: !!python/tuple [0]
     action_log_std: 0.0
-    num_hiddens: !!python/tuple [256, 256]
+    use_multivariate_distribution: False
+    num_hiddens: !!python/tuple [256]
     activation: nn.LeaklyReLU
     drop_rate: 0.5
   env:
@@ -72,7 +74,8 @@ policy:
     num_discrete_actions: 132
     discrete_actions_sections: !!python/tuple [5, 2, 4, 3, 2, 9, 2, 32, 35, 7, 2, 21, 2, 3, 3]
     action_log_std: 0.0
-    num_hiddens: !!python/tuple [256, 256]
+    use_multivariate_distribution: False
+    num_hiddens: !!python/tuple [256]
     activation: nn.LeaklyReLU
     drop_rate: 0.5
 
@@ -82,7 +85,7 @@ value:
   num_hiddens: !!python/tuple [256, 256]
   activation: nn.LeaklyReLU
   drop_rate: 0.5
-  learning_rate: !!float 3e-3
+  learning_rate: !!float 3e-4
   l2_reg: !!float 1e-3
 
 # parameters for discriminator
@@ -92,7 +95,10 @@ discriminator:
   num_hiddens: !!python/tuple [256, 256]
   activation: nn.LeaklyReLU
   drop_rate: 0.5
-  learning_rate: !!float 1e-4
+  learning_rate: !!float 3e-4
+  use_noise: False
+  noise_std: 0.12
+
 ```
 
 ## 3.Performance
@@ -101,17 +107,38 @@ discriminator:
 in your experiments, luckily, almost all the tips and tricks applying to [GAN](https://papers.nips.cc/paper/5423-generative-adversarial-nets.pdf) can be used in `MAGAIL` training.
 
 1. Discriminator Loss
-![Discriminator Loss](https://tva1.sinaimg.cn/large/00831rSTgy1gcxb7seq1yj30wh0bg74k.jpg)
+
+It's identical to original GAN's discriminator loss objective:
+$$
+    - \mathbb E_{x \sim p_{expert}} \left[\log D(x)\right] - \mathbb E_{x \sim p_{generated}} \left[ \log (1 - D(x)) \right]
+$$
+
+The optimal result will be asymptotic to $2 \log 2 \simeq 1.3862....$ while it's about 1.17 here : (
+ 
+![Discriminator Loss](https://tva1.sinaimg.cn/large/007S8ZIlly1ged6l1jgvgj31d20p2js9.jpg)
 
 2. Expert Reward
-![Expert Reward](https://tva1.sinaimg.cn/large/00831rSTgy1gcxbe1hkq4j30wd0bkjrs.jpg)
+
+At the beginning, the discriminator can easily tell which is from expert and assign a high reward which can be about 0.97, 
+As the Policy improve gradually, it starts to go down and eventually converges to around 0.6.
+
+![Expert's Reward](https://tva1.sinaimg.cn/large/007S8ZIlgy1ged6lxfcyrj31ck0oodgp.jpg)
 
 3. Generator Reward
-![Generator Reward](https://tva1.sinaimg.cn/large/00831rSTgy1gcxbewooufj30w90bimxi.jpg)
 
-As you can see, the algorithm is not perfect meet our expectation.Any how, it's Reinforcement Learning at all, just keep trying!!!
+In Generator, it just acts like the opposite, and finally converges to about 0.4.
 
-## 4.Reference
+![Generator's Reward](https://tva1.sinaimg.cn/large/007S8ZIlgy1ged6mm6z1mj31cm0oomy8.jpg)
+
+The final converge ratio is about 6:4 (you may see some slight tendency to break out this convergence, just train it for much longer time) , 
+which is not perfect but usable (As you may know that training GAN is so hard needless to say MAGAIL).  
+
+
+## 4. Build environment based on the pre-trained policy in RealWorld
+
+From step 1 to 3, the policy will be trained fine and then it should be used in real world cases.
+
+## 5.Reference
 
 \[1\]. [Generative Adversarial Imitation Learning](https://arxiv.org/pdf/1606.03476.pdf)    
 \[2\]. [Virtual-Taobao: Virtualizing real-world online retail environment for reinforcement learning](https://arxiv.org/pdf/1805.10000.pdf)  

@@ -9,7 +9,7 @@ from torch.distributions import OneHotCategorical
 from custom.MultiOneHotCategorical import MultiOneHotCategorical
 
 
-class MultiOneHotCategoricalTest(unittest.TestCase):
+class TestMultiOneHotCategorical(unittest.TestCase):
 
     def setUp(self) -> None:
         self.test_probs = torch.tensor([[0.3, 0.2, 0.4, 0.1, 0.25, 0.5, 0.25, 0.3, 0.4, 0.1, 0.1, 0.1],

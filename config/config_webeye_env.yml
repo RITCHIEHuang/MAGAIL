@@ -1,5 +1,6 @@
-dataset_path: ./data/train_data_sas.csv
+dataset_path: ../../data/train_data_sas.csv
 reward_index: 139
+max_step: 10
 observation:
   space: 155
   discrete_space: 132
@@ -7,5 +8,4 @@ observation:
   continuous_space: 23
 action:
   space: 6
-  discrete_space: 0
   continuous_space: 6

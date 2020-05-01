@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from torch.utils.data import Dataset
 
-from utils.torch_utils import FLOAT
+from utils.torch_util import FLOAT
 
 
 class ExpertDataSet(Dataset):

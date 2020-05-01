@@ -2,7 +2,7 @@
 # Created at 2020/3/10
 import torch
 
-from utils.torch_utils import FLOAT, device
+from utils.torch_util import FLOAT, device
 
 
 def estimate_advantages(rewards, masks, values, gamma, tau, trajectory_length):

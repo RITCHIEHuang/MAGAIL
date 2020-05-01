@@ -13,5 +13,5 @@ class TestDiscriminator(TestCase):
         print(self.d)
 
     def test_forward(self):
-        res = self.d.forward(torch.rand((6, 11)))
+        res = self.d.forward(torch.rand((6, 6)), torch.rand((6, 5)))
         self.assertEqual(res.size(), torch.Size([6, 1]))

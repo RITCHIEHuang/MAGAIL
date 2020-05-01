@@ -17,7 +17,7 @@ from algos.ppo_step import ppo_step
 from data.ExpertDataSet import ExpertDataSet
 from models.mlp_critic import Value
 from models.mlp_discriminator import Discriminator
-from utils.torch_utils import device, to_device
+from utils.torch_util import device, to_device
 
 trans_shape_func = lambda x: x.reshape(x.shape[0] * x.shape[1], -1)
 
@@ -127,9 +127,9 @@ class MAGAIL:
 
             self.scheduler_discriminator.step()
 
-        self.writer.add_scalar('loss/train_d_loss', d_loss.item(), epoch)
-        self.writer.add_scalar('reward/train_expert_r', expert_r.mean().item(), epoch)
-        self.writer.add_scalar('reward/train_gen_r', gen_r.mean().item(), epoch)
+        self.writer.add_scalar('train/loss/d_loss', d_loss.item(), epoch)
+        self.writer.add_scalar('train/reward/expert_r', expert_r.mean().item(), epoch)
+        self.writer.add_scalar('train/reward/gen_r', gen_r.mean().item(), epoch)
 
         with torch.no_grad():
             gen_batch_value = self.V(gen_batch_state)
@@ -168,8 +168,8 @@ class MAGAIL:
                                           ppo_clip_ratio=self.config["ppo"]["clip_ratio"],
                                           value_l2_reg=self.config["value"]["l2_reg"])
 
-                self.writer.add_scalar('loss/train_p_loss', p_loss, epoch)
-                self.writer.add_scalar('loss/train_v_loss', v_loss, epoch)
+                self.writer.add_scalar('train/loss/p_loss', p_loss, epoch)
+                self.writer.add_scalar('train/loss/v_loss', v_loss, epoch)
 
         print(f" Training episode:{epoch} ".center(80, "#"))
         print('gen_r:', gen_r.mean().item())
@@ -185,16 +185,16 @@ class MAGAIL:
         gen_batch_state = torch.stack(gen_batch.state)
         gen_batch_action = torch.stack(gen_batch.action)
 
+        gen_r = self.D(gen_batch_state, gen_batch_action)
         for expert_batch_state, expert_batch_action in self.expert_data_loader:
-            gen_r = self.D(gen_batch_state, gen_batch_action)
             expert_r = self.D(expert_batch_state.to(device), expert_batch_action.to(device))
 
             print(f" Evaluating episode:{epoch} ".center(80, "-"))
             print('validate_gen_r:', gen_r.mean().item())
             print('validate_expert_r:', expert_r.mean().item())
 
-        self.writer.add_scalar("reward/validate_gen_r", gen_r.mean().item(), epoch)
-        self.writer.add_scalar("reward/validate_expert_r", expert_r.mean().item(), epoch)
+        self.writer.add_scalar("validate/reward/gen_r", gen_r.mean().item(), epoch)
+        self.writer.add_scalar("validate/reward/expert_r", expert_r.mean().item(), epoch)
 
     def save_model(self, save_path):
         if not os.path.exists(save_path):
