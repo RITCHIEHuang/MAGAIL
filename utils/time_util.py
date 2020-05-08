@@ -3,6 +3,8 @@
 import time
 from functools import wraps
 
+__all__ = ['timer']
+
 
 def timer(message=None, show_result=False):
     def decorate(func):
@@ -22,7 +24,6 @@ def timer(message=None, show_result=False):
             if message:
                 print(message)
             print(f"After {(time.time() - time_start)} s".center(80, " "))
-
 
             print(
                 f"{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))}, End {func.__name__}()".center(80,

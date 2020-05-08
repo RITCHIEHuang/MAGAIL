@@ -1,17 +1,15 @@
 #!/usr/bin/env python
 # Created at 2020/2/15
-# !/usr/bin/env python
-# Created at 2020/2/15
 from typing import Tuple
 
 import torch
 import torch.nn as nn
 
-from utils.torch_util import device
+from utils.torch_util import device, resolve_activate_function
 
 
 class Discriminator(nn.Module):
-    def __init__(self, num_states, num_actions, num_hiddens: Tuple = (64, 64), activation: nn.Module = nn.LeakyReLU,
+    def __init__(self, num_states, num_actions, num_hiddens: Tuple = (64, 64), activation: str = "relu",
                  drop_rate=None, use_noise=False, noise_std=0.1):
         super(Discriminator, self).__init__()
         # set up state space and action space
@@ -25,7 +23,9 @@ class Discriminator(nn.Module):
         _module_units = [num_states + num_actions]
         _module_units.extend(num_hiddens)
         _module_units += self.num_value,
+
         self._layers_units = [(_module_units[i], _module_units[i + 1]) for i in range(len(_module_units) - 1)]
+        activation = resolve_activate_function(activation)
 
         # set up module layers
         self._module_list = nn.ModuleList()

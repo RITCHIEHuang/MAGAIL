@@ -1,8 +1,10 @@
 general:
   seed: 2020
   expert_batch_size: 2000
-  expert_data_path: ./data/train_data_sas.csv
-  training_epochs: 500000
+  expert_data_path: ../data/train_data_sas.csv
+  training_epochs: 100000
+  num_states: 155
+  num_actions: 6
 
 gae:
   gamma: 0.995
@@ -11,15 +13,13 @@ gae:
 ppo:
   clip_ratio: 0.1
   ppo_optim_epochs: 1
-  ppo_mini_batch_size: 500
-  sample_batch_size: 5000
+  ppo_mini_batch_size: 200
+  sample_batch_size: 2000
 
-policy:
-  learning_rate: !!float 3e-4
+jointpolicy:
+  learning_rate: !!float 1e-4
   trajectory_length: 10
-  num_states: 155
-  num_actions: 6
-  user:
+  agent:
     num_states: 155
     num_actions: 6
     num_discrete_actions: 0
@@ -27,7 +27,7 @@ policy:
     action_log_std: 0.0
     use_multivariate_distribution: False
     num_hiddens: !!python/tuple [256]
-    activation: nn.LeaklyReLU
+    activation: LeakyReLU
     drop_rate: 0.5
   env:
     num_states: 161
@@ -37,13 +37,13 @@ policy:
     action_log_std: 0.0
     use_multivariate_distribution: False
     num_hiddens: !!python/tuple [256]
-    activation: nn.LeaklyReLU
+    activation: LeakyReLU
     drop_rate: 0.5
 
 value:
   num_states: 155
   num_hiddens: !!python/tuple [256, 256]
-  activation: nn.LeaklyReLU
+  activation: LeakyReLU
   drop_rate: 0.5
   learning_rate: !!float 3e-4
   l2_reg: !!float 1e-3
@@ -53,8 +53,10 @@ discriminator:
   num_states: 155
   num_actions: 6
   num_hiddens: !!python/tuple [256, 256]
-  activation: nn.LeaklyReLU
+  activation: LeakyReLU
   drop_rate: 0.5
-  learning_rate: !!float 3e-4
-  use_noise: False
-  noise_std: 0.12
+  learning_rate: !!float 4e-4
+  use_noise: True # trick: add noise
+  noise_std: 0.15
+  use_label_smoothing: True # trick: label smoothing
+  label_smooth_rate: 0.1

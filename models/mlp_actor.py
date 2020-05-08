@@ -8,12 +8,13 @@ from torch.distributions import Normal, MultivariateNormal
 
 from custom.MultiOneHotCategorical import MultiOneHotCategorical
 from custom.MultiSoftMax import MultiSoftMax
+from utils.torch_util import resolve_activate_function
 
 
 class Actor(nn.Module):
     def __init__(self, num_states, num_actions, num_discrete_actions=0, discrete_actions_sections: Tuple = (0,),
                  action_log_std=0, use_multivariate_distribution=False,
-                 num_hiddens: Tuple = (64, 64), activation: nn.Module = nn.LeakyReLU,
+                 num_hiddens: Tuple = (64, 64), activation: str = "relu",
                  drop_rate=None):
         """
         Deal with hybrid of discrete actions and continuous actions,
@@ -52,6 +53,7 @@ class Actor(nn.Module):
         _module_units += num_actions,
 
         self._layers_units = [(_module_units[i], _module_units[i + 1]) for i in range(len(_module_units) - 1)]
+        activation = resolve_activate_function(activation)
 
         # set up module layers
         self._module_list = nn.ModuleList()
@@ -59,14 +61,16 @@ class Actor(nn.Module):
             n_units_in, n_units_out = module_unit
             self._module_list.add_module(f"Layer_{idx + 1}_Linear", nn.Linear(n_units_in, n_units_out))
             if idx != len(self._layers_units) - 1:
-                # self._module_list.add_module(f"Layer_{idx + 1}_LayerNorm", nn.LayerNorm(n_units_out))
                 self._module_list.add_module(f"Layer_{idx + 1}_Activation", activation())
+                self._module_list.add_module(f"Layer_{idx + 1}_LayerNorm", nn.LayerNorm(n_units_out))
             if self.drop_rate and idx != len(self._layers_units) - 1:
                 self._module_list.add_module(f"Layer_{idx + 1}_Dropout", nn.Dropout(self.drop_rate))
 
+        self._module_list.add_module(f"Layer_{idx + 1}_Activation", nn.Tanh())
         # if there's discrete actions, add custom Soft Max layer
         if self.num_discrete_actions:
-            self._module_list.add_module(f"Layer_{idx + 1}_Custom_Softmax", MultiSoftMax(0, self.num_discrete_actions, self.discrete_action_sections))
+            self._module_list.add_module(f"Layer_{idx + 1}_Custom_Softmax",
+                                         MultiSoftMax(0, self.num_discrete_actions, self.discrete_action_sections))
 
     def forward(self, x):
         """

@@ -37,8 +37,10 @@ An example configuration file should be like this:
 general:
   seed: 2020
   expert_batch_size: 2000
-  expert_data_path: ./data/train_data_sas.csv
+  expert_data_path: ../data/train_data_sas.csv
   training_epochs: 500000
+  num_states: 155
+  num_actions: 6
 
 # parameters for general advantage estimation
 gae:
@@ -49,15 +51,13 @@ gae:
 ppo:
   clip_ratio: 0.1
   ppo_optim_epochs: 1
-  ppo_mini_batch_size: 500
-  sample_batch_size: 5000
+  ppo_mini_batch_size: 200
+  sample_batch_size: 2000
 
 # parameters for joint-policy
-policy:
-  learning_rate: !!float 3e-4
+jointpolicy:
+  learning_rate: !!float 1e-4
   trajectory_length: 10
-  num_states: 155
-  num_actions: 6
   user:
     num_states: 155
     num_actions: 6
@@ -66,7 +66,7 @@ policy:
     action_log_std: 0.0
     use_multivariate_distribution: False
     num_hiddens: !!python/tuple [256]
-    activation: nn.LeaklyReLU
+    activation: LeaklyReLU
     drop_rate: 0.5
   env:
     num_states: 161
@@ -76,14 +76,14 @@ policy:
     action_log_std: 0.0
     use_multivariate_distribution: False
     num_hiddens: !!python/tuple [256]
-    activation: nn.LeaklyReLU
+    activation: LeakyReLU
     drop_rate: 0.5
 
 # parameters for critic
 value:
   num_states: 155
   num_hiddens: !!python/tuple [256, 256]
-  activation: nn.LeaklyReLU
+  activation: LeakyReLU
   drop_rate: 0.5
   learning_rate: !!float 3e-4
   l2_reg: !!float 1e-3
@@ -93,11 +93,13 @@ discriminator:
   num_states: 155
   num_actions: 6
   num_hiddens: !!python/tuple [256, 256]
-  activation: nn.LeaklyReLU
+  activation: LeakyReLU
   drop_rate: 0.5
-  learning_rate: !!float 3e-4
-  use_noise: False
-  noise_std: 0.12
+  learning_rate: !!float 4e-4
+  use_noise: True # trick: add noise
+  noise_std: 0.15
+  use_label_smoothing: True # trick: label smoothing
+  label_smooth_rate: 0.1
 
 ```
 
@@ -117,14 +119,14 @@ The optimal result will be asymptotic to $2 \log 2 \simeq 1.3862....$ while it's
  
 ![Discriminator Loss](https://tva1.sinaimg.cn/large/007S8ZIlly1ged6l1jgvgj31d20p2js9.jpg)
 
-2. Expert Reward
+2. Expert Reward(Discriminator output)
 
 At the beginning, the discriminator can easily tell which is from expert and assign a high reward which can be about 0.97, 
 As the Policy improve gradually, it starts to go down and eventually converges to around 0.6.
 
 ![Expert's Reward](https://tva1.sinaimg.cn/large/007S8ZIlgy1ged6lxfcyrj31ck0oodgp.jpg)
 
-3. Generator Reward
+3. Generator Reward(Discriminator output)
 
 In Generator, it just acts like the opposite, and finally converges to about 0.4.
 

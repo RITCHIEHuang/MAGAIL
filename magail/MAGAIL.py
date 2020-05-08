@@ -2,8 +2,7 @@
 # Created at 2020/3/10
 import math
 import multiprocessing
-import pickle
-import time
+import os
 
 import numpy as np
 import torch
@@ -12,9 +11,9 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from algos.GAE import estimate_advantages
-from algos.JointPolicy import JointPolicy
-from algos.ppo_step import ppo_step
+from magail.GAE import estimate_advantages
+from magail.JointPolicy import JointPolicy
+from magail.ppo_step import ppo_step
 from data.ExpertDataSet import ExpertDataSet
 from models.mlp_critic import Value
 from models.mlp_discriminator import Discriminator
@@ -24,9 +23,9 @@ trans_shape_func = lambda x: x.reshape(x.shape[0] * x.shape[1], -1)
 
 
 class MAGAIL:
-    def __init__(self, config, log_dir):
+    def __init__(self, config, log_dir, exp_name):
         self.config = config
-        self.exp_name = f"Magail_{time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime())}"
+        self.exp_name = exp_name
         self.writer = SummaryWriter(log_dir=f"{log_dir}/{self.exp_name}")
 
         """seeding"""
@@ -40,27 +39,38 @@ class MAGAIL:
     def _init_model(self):
         self.V = Value(num_states=self.config["value"]["num_states"],
                        num_hiddens=self.config["value"]["num_hiddens"],
-                       drop_rate=self.config["value"]["drop_rate"])
+                       drop_rate=self.config["value"]["drop_rate"],
+                       activation=self.config["value"]["activation"])
         self.P = JointPolicy(initial_state=self.expert_dataset.state.to(device),
-                             config=self.config["policy"])
+                             config=self.config["jointpolicy"])
         self.D = Discriminator(num_states=self.config["discriminator"]["num_states"],
                                num_actions=self.config["discriminator"]["num_actions"],
                                num_hiddens=self.config["discriminator"]["num_hiddens"],
                                drop_rate=self.config["discriminator"]["drop_rate"],
                                use_noise=self.config["discriminator"]["use_noise"],
-                               noise_std=self.config["discriminator"]["noise_std"])
+                               noise_std=self.config["discriminator"]["noise_std"],
+                               activation=self.config["discriminator"]["activation"])
 
-        self.optimizer_policy = optim.Adam(self.P.parameters(), lr=self.config["policy"]["learning_rate"])
+        print("Model Structure")
+        print(self.P)
+        print(self.V)
+        print(self.D)
+        print()
+
+        self.optimizer_policy = optim.Adam(self.P.parameters(), lr=self.config["jointpolicy"]["learning_rate"])
         self.optimizer_value = optim.Adam(self.V.parameters(), lr=self.config["value"]["learning_rate"])
         self.optimizer_discriminator = optim.Adam(self.D.parameters(), lr=self.config["discriminator"]["learning_rate"])
+        self.scheduler_discriminator = optim.lr_scheduler.StepLR(self.optimizer_discriminator,
+                                                                 step_size=2000,
+                                                                 gamma=0.95)
 
         self.discriminator_func = nn.BCELoss()
 
         to_device(self.V, self.P, self.D, self.D, self.discriminator_func)
 
     def _load_expert_data(self):
-        num_expert_states = self.config["policy"]["num_states"]
-        num_expert_actions = self.config["policy"]["num_actions"]
+        num_expert_states = self.config["general"]["num_states"]
+        num_expert_actions = self.config["general"]["num_actions"]
         expert_batch_size = self.config["general"]["expert_batch_size"]
 
         self.expert_dataset = ExpertDataSet(data_set_path=self.config["general"]["expert_data_path"],
@@ -97,8 +107,17 @@ class MAGAIL:
             gen_r = self.D(gen_batch_state, gen_batch_action)
             expert_r = self.D(expert_batch_state.to(device), expert_batch_action.to(device))
 
-            e_loss = self.discriminator_func(expert_r, torch.ones_like(expert_r))
-            g_loss = self.discriminator_func(gen_r, torch.zeros_like(gen_r))
+            # label smoothing for discriminator
+            expert_labels = torch.ones_like(expert_r)
+            gen_labels = torch.zeros_like(gen_r)
+
+            if self.config["discriminator"]["use_label_smoothing"]:
+                smoothing_rate = self.config["discriminator"]["label_smooth_rate"]
+                expert_labels *= (1 - smoothing_rate)
+                gen_labels += torch.ones_like(gen_r) * smoothing_rate
+
+            e_loss = self.discriminator_func(expert_r, expert_labels)
+            g_loss = self.discriminator_func(gen_r, gen_labels)
             d_loss = e_loss + g_loss
 
             # """ WGAN with Gradient Penalty"""
@@ -117,7 +136,11 @@ class MAGAIL:
             d_loss.backward()
             self.optimizer_discriminator.step()
 
+            self.scheduler_discriminator.step()
+
         self.writer.add_scalar('train/loss/d_loss', d_loss.item(), epoch)
+        self.writer.add_scalar("train/loss/e_loss", e_loss.item(), epoch)
+        self.writer.add_scalar("train/loss/g_loss", g_loss.item(), epoch)
         self.writer.add_scalar('train/reward/expert_r', expert_r.mean().item(), epoch)
         self.writer.add_scalar('train/reward/gen_r', gen_r.mean().item(), epoch)
 
@@ -128,7 +151,7 @@ class MAGAIL:
         gen_batch_advantage, gen_batch_return = estimate_advantages(gen_batch_reward, gen_batch_mask,
                                                                     gen_batch_value, self.config["gae"]["gamma"],
                                                                     self.config["gae"]["tau"],
-                                                                    self.config["policy"]["trajectory_length"])
+                                                                    self.config["jointpolicy"]["trajectory_length"])
 
         ####################################################
         # update policy by ppo [mini_batch]
@@ -145,8 +168,8 @@ class MAGAIL:
                 ind = perm[slice(i * ppo_mini_batch_size,
                                  min((i + 1) * ppo_mini_batch_size, gen_batch_size))]
                 mini_batch_state, mini_batch_action, mini_batch_next_state, mini_batch_advantage, mini_batch_return, \
-                    mini_batch_old_log_prob = gen_batch_state[ind], gen_batch_action[ind], gen_batch_next_state[ind], \
-                    gen_batch_advantage[ind], gen_batch_return[ind], gen_batch_old_log_prob[ind]
+                mini_batch_old_log_prob = gen_batch_state[ind], gen_batch_action[ind], gen_batch_next_state[ind], \
+                                          gen_batch_advantage[ind], gen_batch_return[ind], gen_batch_old_log_prob[ind]
 
                 v_loss, p_loss = ppo_step(self.P, self.V, self.optimizer_policy, self.optimizer_value,
                                           states=mini_batch_state,
@@ -175,21 +198,29 @@ class MAGAIL:
         gen_batch_state = torch.stack(gen_batch.state)
         gen_batch_action = torch.stack(gen_batch.action)
 
+        gen_r = self.D(gen_batch_state, gen_batch_action)
         for expert_batch_state, expert_batch_action in self.expert_data_loader:
-            gen_r = self.D(gen_batch_state, gen_batch_action)
             expert_r = self.D(expert_batch_state.to(device), expert_batch_action.to(device))
 
             print(f" Evaluating episode:{epoch} ".center(80, "-"))
-            print('gen_r:', gen_r.mean().item())
-            print('expert_r:', expert_r.mean().item())
+            print('validate_gen_r:', gen_r.mean().item())
+            print('validate_expert_r:', expert_r.mean().item())
 
         self.writer.add_scalar("validate/reward/gen_r", gen_r.mean().item(), epoch)
         self.writer.add_scalar("validate/reward/expert_r", expert_r.mean().item(), epoch)
 
     def save_model(self, save_path):
+        if not os.path.exists(save_path):
+            os.mkdir(save_path)
         # dump model from pkl file
-        pickle.dump((self.D, self.P, self.V), open(f"{save_path}/{self.exp_name}.pkl", 'wb'))
+        # torch.save((self.D, self.P, self.V), f"{save_path}/{self.exp_name}.pt")
+        torch.save(self.D, f"{save_path}/{self.exp_name}_Discriminator.pt")
+        torch.save(self.P, f"{save_path}/{self.exp_name}_JointPolicy.pt")
+        torch.save(self.V, f"{save_path}/{self.exp_name}_Value.pt")
 
     def load_model(self, model_path):
         # load entire model
-        self.D, self.P, self.V = pickle.load(open(model_path, 'wb'))
+        # self.D, self.P, self.V = torch.load((self.D, self.P, self.V), f"{save_path}/{self.exp_name}.pt")
+        self.D = torch.load(f"{model_path}_Discriminator.pt", map_location=device)
+        self.P = torch.load(f"{model_path}_JointPolicy.pt", map_location=device)
+        self.V = torch.load(f"{model_path}_Value.pt", map_location=device)
