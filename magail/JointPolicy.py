@@ -66,7 +66,7 @@ class JointPolicy(nn.Module):
             assert agent_action_log_prob.shape == env_action_log_prob.shape, "Expected agent_policy log_prob and env_" \
                                                                              "policy log_prob with same size!!!"
 
-            mask = torch.ones_like(env_action_log_prob) if i % self.trajectory_length == 0 else torch.zeros_like(
+            mask = torch.zeros_like(env_action_log_prob) if i % self.trajectory_length == 0 else torch.ones_like(
                 env_action_log_prob)
 
             memory.push(agent_state, agent_action, env_action, agent_action_log_prob + env_action_log_prob, mask)
